@@ -1,0 +1,36 @@
+server:
+  port: 9999
+
+spring:
+  quartz:
+    properties:
+      org:
+        quartz:
+          threadPool:
+            class: org.quartz.simpl.SimpleThreadPool
+            threadCount: 5
+            threadPriority: 5
+            threadsInheritContextClassLoaderOfInitializingThread: true
+  datasource:
+    url: jdbc:mysql://148.70.210.242:3306/knowmap?useUnicode=true&characterEncoding=utf-8
+    username: root
+    password: know.map.789
+
+pdfDealScript:
+  dealJson: todo
+  dealContent: python3 /Users/xiahui/PycharmProjects/resetPDF/dispatcher.py
+
+# 20s
+cronSchedule: 0/20   * * * * ?
+
+pdfTaskStatus:
+  jsonTaskTodo: 0
+  jsonTaskDoing: 1
+  jsonTaskDone: 2
+  taskExecuteError: 4
+  contentTaskTodo: 2
+  contentTaskDoing: 5
+  contentTaskDone: 6
+
+
+
