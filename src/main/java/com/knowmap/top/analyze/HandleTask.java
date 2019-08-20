@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.List;
@@ -52,6 +53,7 @@ public class HandleTask extends QuartzJobBean {
 
     private static Logger logger = LoggerFactory.getLogger(QuartzJobBean.class);
 
+    @Transactional
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         try {
@@ -84,6 +86,9 @@ public class HandleTask extends QuartzJobBean {
                     if (taskService.updateTaskStatus(t, jsonTaskTodo) > 0) {
                         // todo 调用json的解析script
                         logger.info(t.toString());
+                    } else {
+                        logger.info("task更新失败");
+                        throw new RuntimeException("执行回滚");
                     }
 
                 } else if (t.getStatus() == contentTaskTodo) {
@@ -121,11 +126,13 @@ public class HandleTask extends QuartzJobBean {
                             Runtime.getRuntime().exec(sb.toString());
                         } catch (IOException e) {
                             logger.error(e.getMessage());
+                            throw new RuntimeException(e);
                         }
-                    } // if
-
+                    } else {
+                        logger.info("task更新失败");
+                        throw new RuntimeException("执行回滚");
+                    }
                 }
-
             });
         } catch (Exception ex) {
             logger.error(ex.getMessage());
