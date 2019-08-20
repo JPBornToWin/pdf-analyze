@@ -7,4 +7,6 @@ public class PdfBlob {
     private Long id;
 
     private String checksum;
+
+    private Integer status;
 }

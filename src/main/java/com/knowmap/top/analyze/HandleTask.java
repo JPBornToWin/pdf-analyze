@@ -1,5 +1,7 @@
 package com.knowmap.top.analyze;
 
+import com.knowmap.top.common.PdFBlobStatus;
+import com.knowmap.top.entity.PdfBlob;
 import com.knowmap.top.entity.Task;
 import com.knowmap.top.service.DocumentService;
 import com.knowmap.top.service.PdfBlobService;
@@ -59,19 +61,41 @@ public class HandleTask extends QuartzJobBean {
                 StringBuilder sb = new StringBuilder();
 
                 if (t.getStatus() == jsonTaskTodo) {
+
+                    Long blobId = documentService.getDocumentById(t.getDocId()).getBlobId();
+
+                    PdfBlob blob = pdfBlobService.getPdfBlobById(blobId);
+
+                    // 已经被处理
+                    if (blob.getStatus() == PdFBlobStatus.JsonHadDone.getCode()) {
+                        return;
+                    }
                     t.setStatus(jsonTaskDoing);
                     if (taskService.updateTaskStatus(t, jsonTaskTodo) > 0) {
                         // todo 调用json的解析script
                         logger.info(t.toString());
                     }
 
+                    Integer oldStatus = blob.getStatus();
+                    blob.setStatus(PdFBlobStatus.JsonHadDone.getCode());
+                    pdfBlobService.updatePdfBlobStatus(blob, oldStatus);
+
                 } else if (t.getStatus() == contentTaskTodo) {
+                    // 已经被处理
+                    Long blobId = documentService.getDocumentById(t.getDocId()).getBlobId();
+
+                    PdfBlob blob = pdfBlobService.getPdfBlobById(blobId);
+
+                    // 已经被处理
+                    if (blob.getStatus() == PdFBlobStatus.ContentHadDone.getCode()) {
+                        return;
+                    }
+
                     t.setStatus(contentTaskDoing);
 
                     // 修改成功则执行
                     if (taskService.updateTaskStatus(t, contentTaskTodo) > 0) {
-                        Long blobId = documentService.getBlobId(t.getDocId());
-                        String checksum = pdfBlobService.getChecksum(blobId);
+                        String checksum = blob.getChecksum();
 
                         // 调用content解析script
                         sb.append(pdfContentScript).
@@ -87,6 +111,10 @@ public class HandleTask extends QuartzJobBean {
                             logger.error(e.getMessage());
                         }
                     } // if
+
+                    Integer oldStatus = blob.getStatus();
+                    blob.setStatus(PdFBlobStatus.JsonHadDone.getCode());
+                    pdfBlobService.updatePdfBlobStatus(blob, oldStatus);
                 }
 
             });

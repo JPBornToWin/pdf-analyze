@@ -38,6 +38,12 @@ public class TaskService {
         return taskMapper.selectList(queryWrapper);
     }
 
+    public Task getTaskByDocId(Long docId) {
+        QueryWrapper<Task> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("docId", docId);
+        return taskMapper.selectOne(queryWrapper);
+    }
+
 
     public int updateTaskStatus(Task task, int oldStatus) {
         UpdateWrapper<Task> updateWrapper = new UpdateWrapper<>();

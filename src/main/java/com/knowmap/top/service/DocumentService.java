@@ -12,9 +12,10 @@ public class DocumentService {
     @Autowired(required = false)
     private DocumentMapper documentMapper;
 
-    public Long getBlobId(long docId) {
+    public Document getDocumentById(long id) {
         QueryWrapper<Document> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("id", docId);
-        return documentMapper.selectOne(queryWrapper).getBlobId();
+        queryWrapper.eq("id", id);
+        return documentMapper.selectOne(queryWrapper);
     }
+
 }
