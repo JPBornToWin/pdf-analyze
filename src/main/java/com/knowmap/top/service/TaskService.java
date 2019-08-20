@@ -30,11 +30,10 @@ public class TaskService {
     @Value(("${pdfTaskStatus.contentTaskDoing}"))
     private int contentTaskDoing;
 
-    // 一次最多查询5个
+    // 一次查询5个
     public List<Task> getUndoTasks() {
-
         QueryWrapper<Task> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("status", jsonTaskTodo, contentTaskTodo).orderByAsc("id").last("limit 0, 1");
+        queryWrapper.in("status", jsonTaskTodo, contentTaskTodo).orderByDesc("id").last("limit 0, 5");
         return taskMapper.selectList(queryWrapper);
     }
 

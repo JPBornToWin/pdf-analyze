@@ -56,9 +56,12 @@ public class HandleTask extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         try {
             List<Task> tasks = taskService.getUndoTasks();
+
             tasks.parallelStream().forEach(t -> {
 
                 StringBuilder sb = new StringBuilder();
+
+
 
                 if (t.getStatus() == jsonTaskTodo) {
 
@@ -71,14 +74,17 @@ public class HandleTask extends QuartzJobBean {
                         return;
                     }
                     t.setStatus(jsonTaskDoing);
+
+                    Integer oldStatus = blob.getStatus();
+                    blob.setStatus(PdFBlobStatus.JsonHadDone.getCode());
+                    int ret = pdfBlobService.updatePdfBlobStatus(blob, oldStatus);
+                    if (ret == 0)
+                        return;
+
                     if (taskService.updateTaskStatus(t, jsonTaskTodo) > 0) {
                         // todo 调用json的解析script
                         logger.info(t.toString());
                     }
-
-                    Integer oldStatus = blob.getStatus();
-                    blob.setStatus(PdFBlobStatus.JsonHadDone.getCode());
-                    pdfBlobService.updatePdfBlobStatus(blob, oldStatus);
 
                 } else if (t.getStatus() == contentTaskTodo) {
                     // 已经被处理
@@ -92,6 +98,12 @@ public class HandleTask extends QuartzJobBean {
                     }
 
                     t.setStatus(contentTaskDoing);
+
+                    Integer oldStatus = blob.getStatus();
+                    blob.setStatus(PdFBlobStatus.JsonHadDone.getCode());
+                    int ret = pdfBlobService.updatePdfBlobStatus(blob, oldStatus);
+                    if (ret == 0)
+                        return;
 
                     // 修改成功则执行
                     if (taskService.updateTaskStatus(t, contentTaskTodo) > 0) {
@@ -112,9 +124,6 @@ public class HandleTask extends QuartzJobBean {
                         }
                     } // if
 
-                    Integer oldStatus = blob.getStatus();
-                    blob.setStatus(PdFBlobStatus.JsonHadDone.getCode());
-                    pdfBlobService.updatePdfBlobStatus(blob, oldStatus);
                 }
 
             });
