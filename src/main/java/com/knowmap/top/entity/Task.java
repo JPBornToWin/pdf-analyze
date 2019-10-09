@@ -9,4 +9,6 @@ public class Task {
     private Long docId;
 
     private Integer status;
+
+    private String errorInfo;
 }

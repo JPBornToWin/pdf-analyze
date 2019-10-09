@@ -3,6 +3,7 @@ package com.knowmap.top.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.knowmap.top.common.PdfTaskStatus;
 import com.knowmap.top.entity.Task;
 import com.knowmap.top.mapper.TaskMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,29 +12,17 @@ import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TaskService {
     @Autowired(required = false)
     private TaskMapper taskMapper;
 
-    // 状态常量
-    @Value("${pdfTaskStatus.jsonTaskTodo}")
-    private int jsonTaskTodo;
-
-    @Value("${pdfTaskStatus.jsonTaskDoing}")
-    private int jsonTaskDoing;
-
-    @Value(("${pdfTaskStatus.contentTaskTodo}"))
-    private int contentTaskTodo;
-
-    @Value(("${pdfTaskStatus.contentTaskDoing}"))
-    private int contentTaskDoing;
-
     // 一次查询5个
     public List<Task> getUndoTasks() {
         QueryWrapper<Task> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("status", jsonTaskTodo, contentTaskTodo).orderByDesc("id").last("limit 0, 5");
+        queryWrapper.in("status", PdfTaskStatus.JsonTaskTodo, PdfTaskStatus.ContentTaskTodo).orderByDesc("id").last("limit 0, 5");
         return taskMapper.selectList(queryWrapper);
     }
 
@@ -48,6 +37,23 @@ public class TaskService {
         UpdateWrapper<Task> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("id", task.getId()).eq("status", oldStatus);
         return taskMapper.update(task, updateWrapper);
+    }
+
+    public List<Task> getNeedSyncTasks(Integer blobTaskStatus, Integer taskStatus) {
+        return taskMapper.getTasks(blobTaskStatus, taskStatus);
+    }
+
+    public Integer batchUpdateStatus(List<Task> tasks, Integer newStatus) {
+        if (Objects.isNull(tasks) || tasks.size() == 0) {
+            return 0;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("(");
+        tasks.forEach(task -> sb.append(task.getId()).append(","));
+        String str = sb.substring(0, sb.length() - 1);
+
+        return taskMapper.batchUpdateStatus(str + ")", newStatus);
     }
 
 }

@@ -13,8 +13,24 @@ public class QuartzConfig {
 
 
     @Bean
-    public JobDetail getTask() {
-        return JobBuilder.newJob(HandleTask.class).withIdentity("handleJsonTask").storeDurably().build();
+    public JobDetail getBaseTask() {
+        return JobBuilder.newJob(TaskHandle.class).withIdentity("baseTask").storeDurably().build();
+    }
+
+    @Bean
+    public JobDetail getSyncTask() {
+        return JobBuilder.newJob(SyncTaskHandle.class).withIdentity("syncTask").storeDurably().build();
+    }
+
+
+    @Bean
+    public Trigger getSyncTaskTrigger() {
+        CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(cronSchedule);
+        return TriggerBuilder.newTrigger().forJob(getSyncTask())
+                .withIdentity("syncTaskTrigger")
+                .withSchedule(scheduleBuilder)
+                .startNow()
+                .build();
     }
 
 
@@ -22,7 +38,7 @@ public class QuartzConfig {
     public Trigger getJsonTaskTrigger() {
 //        0 0/1 * * * ? * 每一分钟一次
         CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(cronSchedule);
-        return TriggerBuilder.newTrigger().forJob(getTask())
+        return TriggerBuilder.newTrigger().forJob(getBaseTask())
                 .withIdentity("jsonTaskTrigger")
                 .withSchedule(scheduleBuilder)
                 .startNow()

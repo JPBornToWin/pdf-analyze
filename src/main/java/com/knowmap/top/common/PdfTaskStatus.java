@@ -1,6 +1,6 @@
 package com.knowmap.top.common;
 
-public enum PdFBlobStatus {
+public enum  PdfTaskStatus {
     JsonTaskTodo(0),
     JsonTaskDoing(1),
     JsonTaskDone(2),
@@ -11,7 +11,7 @@ public enum PdFBlobStatus {
 
     int code;
 
-    PdFBlobStatus(Integer code) {
+    PdfTaskStatus(Integer code) {
         this.code = code;
     }
 
