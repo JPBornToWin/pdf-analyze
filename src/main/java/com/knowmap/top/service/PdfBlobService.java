@@ -6,6 +6,7 @@ import com.knowmap.top.common.PdFBlobStatus;
 import com.knowmap.top.entity.PdfBlob;
 import com.knowmap.top.entity.Task;
 import com.knowmap.top.mapper.PdfBlobMapper;
+import com.knowmap.top.mapper.TaskMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,9 @@ import java.util.List;
 public class PdfBlobService {
     @Autowired(required = false)
     private PdfBlobMapper pdfBlobMapper;
+
+    @Autowired(required = false)
+    private TaskMapper taskMapper;
 
     public PdfBlob getPdfBlobById(Long id) {
         QueryWrapper<PdfBlob> queryWrapper = new QueryWrapper<>();
@@ -29,7 +33,8 @@ public class PdfBlobService {
     }
 
     public PdfBlob getLock(Long taskId) {
-        return pdfBlobMapper.getPdfBlob(taskId);
+        Long docId = taskMapper.selectById(taskId).getDocId();
+        return pdfBlobMapper.getPdfBlob(docId);
     }
 
     public Integer updatePdfBlobStatus(Long blobId, Integer oldStatus, Integer newStatus) {

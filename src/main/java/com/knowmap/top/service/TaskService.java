@@ -39,6 +39,10 @@ public class TaskService {
         return taskMapper.update(task, updateWrapper);
     }
 
+    public int updateTask(Task task) {
+        return taskMapper.updateById(task);
+    }
+
     public List<Task> getNeedSyncTasks(Integer blobTaskStatus, Integer taskStatus) {
         return taskMapper.getTasks(blobTaskStatus, taskStatus);
     }

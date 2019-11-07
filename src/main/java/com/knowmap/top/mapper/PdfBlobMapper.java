@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.knowmap.top.entity.PdfBlob;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -18,9 +19,9 @@ public interface PdfBlobMapper extends BaseMapper<PdfBlob> {
      * @param status 将要被修改 status 的值
      * @return
      */
-    @Update({"update pdf_blob set status = #{2} where id = #{0} and status = #{1}"})
-    Integer updateStatus(Long id, Integer baseStatus, Integer status);
+    @Update({"update pdf_blob set status = #{status} where id = #{id} and status = #{baseStatus}"})
+    Integer updateStatus(@Param("id") Long id, @Param("baseStatus") Integer baseStatus, @Param("status") Integer status);
 
-    @Select({"select pb.id, pb.status, pd.checksum from pdf_blob pb inner join document d on d.blob_id = pb.id where d.task_id = #{0}"})
-    PdfBlob getPdfBlob(Long taskId);
+    @Select({"select pb.id, pb.status, pb.checksum from pdf_blob pb inner join document d on d.blob_id = pb.id where d.id = #{docId}"})
+    PdfBlob getPdfBlob(@Param("docId") Long docId);
 }

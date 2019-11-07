@@ -11,4 +11,6 @@ public class Task {
     private Integer status;
 
     private String errorInfo;
+
+    private Integer retryTimes;
 }

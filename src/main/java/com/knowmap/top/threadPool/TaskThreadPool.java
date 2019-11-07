@@ -11,7 +11,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.util.StreamUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.util.Objects;
 import java.util.concurrent.*;
@@ -44,7 +47,8 @@ public class TaskThreadPool {
             new ThreadPoolExecutor.DiscardPolicy()
     );
 
-    private TaskThreadPool(){}
+    private TaskThreadPool() {
+    }
 
     public static TaskThreadPool getInstance() {
         if (INSTANCE == null) {
@@ -58,46 +62,95 @@ public class TaskThreadPool {
         return INSTANCE;
     }
 
-    public void submitJsonTask(Process process, TaskService taskService, Task task, PdfBlob pdfBlob, PdfBlobService pdfBlobService) {
+    public void submitJsonTask(String command, TaskService taskService, Task task, PdfBlob pdfBlob, PdfBlobService pdfBlobService) {
+        System.out.println("command : " + command);
         currentTaskNum.getAndIncrement();
         threadPoolExecutor.submit(() -> {
+            Process process = null;
             try {
-                process.wait(3 * 60 * 1000);
-                byte[] bytes;
-                try {
-                    bytes = StreamUtils.copyToByteArray(process.getErrorStream());
-                    if (Objects.nonNull(bytes) && bytes.length > 0) {
-                        String errorMsg = new String(bytes);
+                process = Runtime.getRuntime().exec(command);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
+                Thread.sleep(5 * 1000);
+                StringBuilder currentLine = new StringBuilder();
+                while (reader.ready()) {
+
+                    while (reader.ready()) {
+                        currentLine.append(reader.readLine());
+                    }
+
+                    if (errorReader.ready()) {
+                        break;
+                    }
+
+                    System.out.println("心跳包: " + currentLine);
+                    if (currentLine.toString().contains("done")) {
+                        break;
+                    }
+                    Thread.sleep(5 * 1000);
+                }
+
+                if (currentLine == null || !currentLine.toString().contains("done")) {
+                    if (errorReader.ready()) {
+                        // 执行抛出异常
+                        String errorMsg = errorReader.readLine();
+                        System.out.println(errorMsg + " 抛出异常");
+                        int oldStatus = task.getStatus();
                         task.setStatus(PdfTaskStatus.TaskExecuteError.getCode());
                         task.setErrorInfo(errorMsg);
+                        taskService.updateTaskStatus(task, oldStatus);
+                        pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.TaskExecuteError.getCode());
 
                     } else {
-                        int oldStatus = task.getStatus();
-                        task.setStatus(PdfTaskStatus.JsonTaskDone.getCode());
-                        pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.JsonTaskDone.getCode());
-                        taskService.updateTaskStatus(task, oldStatus);
+                        // 超时
+                        task.setRetryTimes(task.getRetryTimes() == null ? 1 : task.getRetryTimes() + 1);
+                        pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.JsonTaskTodo.getCode());
+                        System.out.println("thread name : " + Thread.currentThread().getName() + " 心跳超时");
                     }
-                } catch (IOException e2) {
-                    log.error("TaskThreadPool#submitJsonTask #{}", e2);
+                } else {
+                    // 执行成功
+                    int oldStatus = task.getStatus();
+                    task.setStatus(PdfTaskStatus.JsonTaskDone.getCode());
+                    pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.JsonTaskDone.getCode());
+                    taskService.updateTaskStatus(task, oldStatus);
+                    System.out.println("thread name : " + Thread.currentThread().getName() + "执行成功");
                 }
+
             } catch (InterruptedException e1) {
                 log.error("TaskThreadPool#submitJsonTask #{}", e1);
 
+            } catch (IOException e2) {
+                log.error("TaskThreadPool#submitJsonTask #{}", e2);
             } finally {
+                // 终止进程
+                if (process.isAlive()) {
+                    process.destroyForcibly();
+                }
+
                 currentTaskNum.getAndDecrement();
             }
         });
 
     }
 
-    public void submitTask(Process process) {
+    public void submitContentTask(String command, PdfBlob pdfBlob, PdfBlobService pdfBlobService) {
         currentTaskNum.getAndIncrement();
         threadPoolExecutor.submit(() -> {
+            Process process = null;
             try {
-                process.wait(3 * 60 * 1000);
-            } catch (InterruptedException e) {
-                log.error("TaskThreadPool#submitTask #{}", e);
+                try {
+                    process = Runtime.getRuntime().exec(command);
+                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
+                    if (errorReader.ready()) {
+                        pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.TaskExecuteError.getCode());
+                    }
+                } catch (IOException e2) {
+                    log.error("TaskThreadPool#submitJsonTask #{}", e2);
+                }
             } finally {
+                if (process.isAlive()) {
+                    process.destroy();
+                }
                 currentTaskNum.getAndDecrement();
             }
         });

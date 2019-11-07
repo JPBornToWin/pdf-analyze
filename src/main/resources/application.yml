@@ -15,16 +15,19 @@ spring:
     #url: jdbc:mysql://148.70.210.242:3306/knowmap?useUnicode=true&characterEncoding=utf-8
     #username: root
     #password: know.map.789
-    url: jdbc:mysql://127.0.0.1:3306/knowmap1?useUnicode=true&characterEncoding=utf-8
+    url: jdbc:mysql://127.0.0.1:3306/knowmap2?useUnicode=true&characterEncoding=utf-8
     username: root
     password: 123
 
 pdfDealScript:
-  dealJson: todo
+  dealJson: java -Djava.library.path=/Users/xiahui/Desktop/pdf/Lib -jar /Users/xiahui/Desktop/pdf/PDF-1.0-SNAPSHOT-jar-with-dependencies.jar
   dealContent: python3 /Users/xiahui/PycharmProjects/resetPDF/dispatcher.py
 
 # 20s
 cronSchedule: 0/20   * * * * ?
+
+# task 最多执行3次
+taskMaxRetryTimes: 3
 
 
 
