@@ -22,7 +22,7 @@ public class TaskService {
     // 一次查询5个
     public List<Task> getUndoTasks() {
         QueryWrapper<Task> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("status", PdfTaskStatus.JsonTaskTodo, PdfTaskStatus.ContentTaskTodo).orderByDesc("id").last("limit 0, 5");
+        queryWrapper.in("status", PdfTaskStatus.JsonTaskTodo.getCode(), PdfTaskStatus.ContentTaskTodo.getCode()).orderByDesc("id").last("limit 0, 5");
         return taskMapper.selectList(queryWrapper);
     }
 
@@ -34,9 +34,7 @@ public class TaskService {
 
 
     public int updateTaskStatus(Task task, int oldStatus) {
-        UpdateWrapper<Task> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id", task.getId()).eq("status", oldStatus);
-        return taskMapper.update(task, updateWrapper);
+       return taskMapper.updateStatus(task.getId(), task.getStatus(), oldStatus);
     }
 
     public int updateTask(Task task) {

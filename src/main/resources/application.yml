@@ -19,9 +19,9 @@ spring:
     username: root
     password: 123
 
-pdfDealScript:
-  dealJson: java -Djava.library.path=/Users/xiahui/Desktop/pdf/Lib -jar /Users/xiahui/Desktop/pdf/PDF-1.0-SNAPSHOT-jar-with-dependencies.jar
-  dealContent: python3 /Users/xiahui/PycharmProjects/resetPDF/dispatcher.py
+#pdfDealScript:
+#  dealJson: java -Djava.library.path=/Users/xiahui/Desktop/pdf/Lib -jar /Users/xiahui/Desktop/pdf/PDF-1.0-SNAPSHOT-jar-with-dependencies.jar
+#  dealContent: python3 /Users/xiahui/PycharmProjects/resetPDF/dispatcher.py
 
 # 20s
 cronSchedule: 0/20   * * * * ?

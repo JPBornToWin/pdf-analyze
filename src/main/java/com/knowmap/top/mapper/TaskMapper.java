@@ -18,6 +18,9 @@ public interface TaskMapper extends BaseMapper<Task>{
     @Select({"select t.id, t.status, t.retry_times from task t inner join (select d.id from document d inner  join pdf_blob pb on d.blob_id = pb.id where pb.status = #{blobStatus}) tmp on tmp.id = t.doc_id where t.status = #{taskStatus}"})
     List<Task> getTasks(@Param("blobStatus") Integer blobStatus, @Param("taskStatus") Integer taskStatus);
 
+    @Update({"update task set status = ${newStatus} where id = #{id}"})
+    Integer updateStatus(@Param("id") Long id, @Param("newStatus") Integer newStatus, @Param("oldStatus") Integer oldStatus);
+
     @Update({"update task set status = #{newStatus} where id in ${str}"})
     Integer batchUpdateStatus(@Param("str") String str, @Param("newStatus") Integer newStatus);
 }

@@ -84,6 +84,7 @@ public class TaskThreadPool {
                     }
 
                     System.out.println("心跳包: " + currentLine);
+
                     if (currentLine.toString().contains("done")) {
                         break;
                     }
@@ -103,7 +104,10 @@ public class TaskThreadPool {
 
                     } else {
                         // 超时
+                        int oldStatus = task.getStatus();
+                        task.setStatus(PdfTaskStatus.JsonTaskTodo.getCode());
                         task.setRetryTimes(task.getRetryTimes() == null ? 1 : task.getRetryTimes() + 1);
+                        taskService.updateTaskStatus(task, oldStatus);
                         pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.JsonTaskTodo.getCode());
                         System.out.println("thread name : " + Thread.currentThread().getName() + " 心跳超时");
                     }
@@ -113,6 +117,7 @@ public class TaskThreadPool {
                     task.setStatus(PdfTaskStatus.JsonTaskDone.getCode());
                     pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.JsonTaskDone.getCode());
                     taskService.updateTaskStatus(task, oldStatus);
+
                     System.out.println("thread name : " + Thread.currentThread().getName() + "执行成功");
                 }
 
@@ -133,24 +138,61 @@ public class TaskThreadPool {
 
     }
 
-    public void submitContentTask(String command, PdfBlob pdfBlob, PdfBlobService pdfBlobService) {
+    public void submitContentTask(TaskService taskService, Task task, String command, PdfBlob pdfBlob, PdfBlobService pdfBlobService) {
         currentTaskNum.getAndIncrement();
         threadPoolExecutor.submit(() -> {
             Process process = null;
             try {
                 try {
-                    process = Runtime.getRuntime().exec(command);
-                    BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
-                    if (errorReader.ready()) {
-                        pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.TaskExecuteError.getCode());
+                    try {
+                        log.info(command);
+                        process = Runtime.getRuntime().exec(command);
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
+                        Thread.sleep(5 * 1000);
+                        StringBuilder currentLine = new StringBuilder();
+                        while (reader.ready()) {
+                            while (reader.ready()) {
+                                currentLine.append(reader.readLine());
+                            }
+
+                            if (errorReader.ready()) {
+                                break;
+                            }
+
+                            System.out.println("心跳包: " + currentLine);
+                            if (currentLine.toString().contains("done")) {
+                                break;
+                            }
+                            Thread.sleep(3 * 1000);
+                        }
+
+                        // 异常超时
+                        if (!currentLine.toString().contains("done") && !errorReader.ready()) {
+                            int oldStatus = task.getStatus();
+                            task.setStatus(PdfTaskStatus.ContentTaskTodo.getCode());
+                            task.setRetryTimes(task.getRetryTimes() == null ? 1 : task.getRetryTimes() + 1);
+                            taskService.updateTaskStatus(task, oldStatus);
+                            pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.ContentTaskTodo.getCode());
+                        }
+
+                        // 异常
+                        if (errorReader.ready()) {
+                            pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.TaskExecuteError.getCode());
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
+
                 } catch (IOException e2) {
                     log.error("TaskThreadPool#submitJsonTask #{}", e2);
                 }
             } finally {
                 if (process.isAlive()) {
-                    process.destroy();
+                    process.destroyForcibly();
                 }
+
                 currentTaskNum.getAndDecrement();
             }
         });

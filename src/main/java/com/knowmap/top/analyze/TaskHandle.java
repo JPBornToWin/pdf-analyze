@@ -39,17 +39,16 @@ public class TaskHandle extends QuartzJobBean {
     private PdfBlobService pdfBlobService;
 
     // 调用脚本url常量
-    @Value("${pdfDealScript.dealContent}")
-    private String pdfContentScript;
+//    @Value("${pdfDealScript.dealContent}")
+    private String pdfContentScript = FileConstant.dealContent;
 
-    @Value("${pdfDealScript.dealJson}")
-    private String pdfJsonScript;
+//    @Value("${pdfDealScript.dealJson}")
+    private String pdfJsonScript = FileConstant.dealJson;
 
     @Value("${taskMaxRetryTimes}")
     private Integer taskMaxRetryTimes;
 
 
-    @Transactional
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         log.info("task");
@@ -114,7 +113,7 @@ public class TaskHandle extends QuartzJobBean {
                         if (Objects.nonNull(pdfBlob) && (pdfBlob.getStatus().intValue() == PdfTaskStatus.ContentTaskTodo.getCode().intValue() || pdfBlob.getStatus().intValue() == PdfTaskStatus.TaskExecuteError.getCode().intValue())) {
                             // 更新 task'status
                             pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.ContentTaskDoing.getCode());
-                            t.setStatus(PdfTaskStatus.ContentTaskTodo.getCode());
+                            t.setStatus(PdfTaskStatus.ContentTaskDoing.getCode());
                             // 更新 task'status
                             if (taskService.updateTaskStatus(t, PdfTaskStatus.ContentTaskTodo.getCode()) > 0) {
                                 // 调用content解析script
@@ -125,7 +124,7 @@ public class TaskHandle extends QuartzJobBean {
                                         append(" ").append(pdfBlob.getId());
 
                                 // 此处调用线程池
-                                TaskThreadPool.getInstance().submitContentTask(sb.toString(), pdfBlob, pdfBlobService);
+                                TaskThreadPool.getInstance().submitContentTask(taskService, t, sb.toString(), pdfBlob, pdfBlobService);
                             } else {
                                 log.debug("task更新失败");
                                 throw new RuntimeException("执行回滚");
