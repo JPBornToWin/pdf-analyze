@@ -6,17 +6,11 @@ import com.knowmap.top.entity.Task;
 import com.knowmap.top.service.PdfBlobService;
 import com.knowmap.top.service.TaskService;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.quartz.QuartzJobBean;
-import org.springframework.util.StreamUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.sql.Blob;
-import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 

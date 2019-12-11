@@ -2,13 +2,10 @@ package com.knowmap.top.service;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.knowmap.top.common.PdfTaskStatus;
 import com.knowmap.top.entity.Task;
 import com.knowmap.top.mapper.TaskMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
