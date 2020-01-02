@@ -12,8 +12,8 @@ public class FileConstant {
         } else {
             ROOT = "/root/knowmap-file";
 
-            dealJson =  "java -Djava.library.path=/root/knowmap-script/pdf/Lib -jar /root/knowmap-script/pdf/PDF-1.0-SNAPSHOT-jar-with-dependencies.jar";
-            dealContent =  "python3 /root/knowmap-script/resetPDF/dispatcher.py";
+            dealJson =  "java -Djava.library.path=/root/pdf-json/pdf/Lib -jar /root/pdf-json/pdf/PDF-1.0-SNAPSHOT-jar-with-dependencies.jar";
+            dealContent =  "python3 /root/pdf-content/resetPDF/dispatcher.py";
         }
     }
 

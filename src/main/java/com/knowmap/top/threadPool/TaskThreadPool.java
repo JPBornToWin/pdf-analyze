@@ -65,7 +65,7 @@ public class TaskThreadPool {
                 process = Runtime.getRuntime().exec(command);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
-                Thread.sleep(5 * 1000);
+                Thread.sleep(30 * 1000);
                 StringBuilder currentLine = new StringBuilder();
                 while (reader.ready()) {
 
@@ -77,15 +77,15 @@ public class TaskThreadPool {
                         break;
                     }
 
-                    System.out.println("心跳包: " + currentLine);
+                    System.out.println("解析 json 心跳包: " + currentLine);
 
                     if (currentLine.toString().contains("done")) {
                         break;
                     }
-                    Thread.sleep(5 * 1000);
+                    Thread.sleep(30 * 1000);
                 }
 
-                if (currentLine == null || !currentLine.toString().contains("done")) {
+                if (!currentLine.toString().contains("done")) {
                     if (errorReader.ready()) {
                         // 执行抛出异常
                         String errorMsg = errorReader.readLine();
@@ -122,7 +122,7 @@ public class TaskThreadPool {
                 log.error("TaskThreadPool#submitJsonTask #{}", e2);
             } finally {
                 // 终止进程
-                if (process.isAlive()) {
+                if (process != null && process.isAlive()) {
                     process.destroyForcibly();
                 }
 
@@ -143,7 +143,7 @@ public class TaskThreadPool {
                         process = Runtime.getRuntime().exec(command);
                         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                         BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
-                        Thread.sleep(5 * 1000);
+                        Thread.sleep(30 * 1000);
                         StringBuilder currentLine = new StringBuilder();
                         while (reader.ready()) {
                             while (reader.ready()) {
@@ -154,11 +154,11 @@ public class TaskThreadPool {
                                 break;
                             }
 
-                            System.out.println("心跳包: " + currentLine);
+                            System.out.println("提取 content 心跳包: " + currentLine);
                             if (currentLine.toString().contains("done")) {
                                 break;
                             }
-                            Thread.sleep(3 * 1000);
+                            Thread.sleep(30 * 1000);
                         }
 
                         // 异常超时
@@ -183,7 +183,7 @@ public class TaskThreadPool {
                     log.error("TaskThreadPool#submitJsonTask #{}", e2);
                 }
             } finally {
-                if (process.isAlive()) {
+                if (process != null && process.isAlive()) {
                     process.destroyForcibly();
                 }
 
