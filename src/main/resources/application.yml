@@ -28,5 +28,5 @@ cronSchedule: 0/20   * * * * ?
 
 # task 最多执行3次
 taskMaxRetryTimes: 3
-logging:
-  config: classpath:log4j.properties
+#logging:
+#  config: classpath:log4j.properties

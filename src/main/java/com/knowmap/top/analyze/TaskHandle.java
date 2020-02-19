@@ -53,12 +53,10 @@ public class TaskHandle extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         log.info("task");
         try {
-//            logger.info("开始啦");
-            // 判断线程池的状态
+            // 判断线程池的状态 如果堆积任务过多直接返回
             if (TaskThreadPool.getInstance().isFull()) {
                 return;
             }
-//            logger.info("开始啦 - 1");
 
             List<Task> tasks = taskService.getUndoTasks();
 
@@ -92,6 +90,8 @@ public class TaskHandle extends QuartzJobBean {
                                         append(pdfPath).
                                         append(" ").
                                         append(jsonDir);
+
+                                // 此处调用线程池
                                 TaskThreadPool.getInstance().submitJsonTask(sb.toString(), taskService, t, pdfBlob, pdfBlobService);
                             } else {
                                 log.debug("task更新失败");

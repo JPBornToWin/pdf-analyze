@@ -18,7 +18,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TaskThreadPool {
     private static volatile TaskThreadPool INSTANCE;
 
-    private static int MAX = 40;
+    // 最多允许堆积任务数目
+    private static int MAX = 30;
+
+    // 检测脚本程序运行间隔的时间（秒）
+    private static int SLEEP_TIME = 25 * 1000;
 
     // 记录当前线程池的task未处理完毕的数目
     private AtomicInteger currentTaskNum = new AtomicInteger(0);
@@ -41,8 +45,7 @@ public class TaskThreadPool {
             new ThreadPoolExecutor.DiscardPolicy()
     );
 
-    private TaskThreadPool() {
-    }
+    private TaskThreadPool() { }
 
     public static TaskThreadPool getInstance() {
         if (INSTANCE == null) {
@@ -65,7 +68,7 @@ public class TaskThreadPool {
                 process = Runtime.getRuntime().exec(command);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
-                Thread.sleep(30 * 1000);
+                Thread.sleep(SLEEP_TIME);
                 StringBuilder currentLine = new StringBuilder();
                 while (reader.ready()) {
 
@@ -82,7 +85,7 @@ public class TaskThreadPool {
                     if (currentLine.toString().contains("done")) {
                         break;
                     }
-                    Thread.sleep(30 * 1000);
+                    Thread.sleep(SLEEP_TIME);
                 }
 
                 if (!currentLine.toString().contains("done")) {
@@ -121,12 +124,13 @@ public class TaskThreadPool {
             } catch (IOException e2) {
                 log.error("TaskThreadPool#submitJsonTask #{}", e2);
             } finally {
+                currentTaskNum.getAndDecrement();
+
                 // 终止进程
                 if (process != null && process.isAlive()) {
                     process.destroyForcibly();
                 }
 
-                currentTaskNum.getAndDecrement();
             }
         });
 
@@ -143,7 +147,7 @@ public class TaskThreadPool {
                         process = Runtime.getRuntime().exec(command);
                         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                         BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
-                        Thread.sleep(30 * 1000);
+                        Thread.sleep(SLEEP_TIME);
                         StringBuilder currentLine = new StringBuilder();
                         while (reader.ready()) {
                             while (reader.ready()) {
@@ -158,7 +162,7 @@ public class TaskThreadPool {
                             if (currentLine.toString().contains("done")) {
                                 break;
                             }
-                            Thread.sleep(30 * 1000);
+                            Thread.sleep(SLEEP_TIME);
                         }
 
                         // 异常超时
@@ -183,11 +187,12 @@ public class TaskThreadPool {
                     log.error("TaskThreadPool#submitJsonTask #{}", e2);
                 }
             } finally {
+                currentTaskNum.getAndDecrement();
+
                 if (process != null && process.isAlive()) {
                     process.destroyForcibly();
                 }
 
-                currentTaskNum.getAndDecrement();
             }
         });
     }
