@@ -6,23 +6,33 @@ import com.knowmap.top.entity.Task;
 import com.knowmap.top.service.PdfBlobService;
 import com.knowmap.top.service.TaskService;
 import lombok.extern.slf4j.Slf4j;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
+@Component
 public class TaskThreadPool {
-    private static volatile TaskThreadPool INSTANCE;
+
+    static Set<BufferedReader> set = new ConcurrentSkipListSet<>();
+
+    @Autowired
+    private TaskService taskService;
+
+    @Autowired
+    private PdfBlobService pdfBlobService;
 
     // 最多允许堆积任务数目
-    private static int MAX = 30;
+    private static int MAX = 20;
 
     // 检测脚本程序运行间隔的时间（秒）
-    private static int SLEEP_TIME = 25 * 1000;
+    private static int SLEEP_TIME = 30;
 
     // 记录当前线程池的task未处理完毕的数目
     private AtomicInteger currentTaskNum = new AtomicInteger(0);
@@ -45,21 +55,8 @@ public class TaskThreadPool {
             new ThreadPoolExecutor.DiscardPolicy()
     );
 
-    private TaskThreadPool() { }
 
-    public static TaskThreadPool getInstance() {
-        if (INSTANCE == null) {
-            synchronized (TaskThreadPool.class) {
-                if (INSTANCE == null) {
-                    INSTANCE = new TaskThreadPool();
-                }
-            }
-        }
-
-        return INSTANCE;
-    }
-
-    public void submitJsonTask(String command, TaskService taskService, Task task, PdfBlob pdfBlob, PdfBlobService pdfBlobService) {
+    public void submitJsonTask(String command, Task task, PdfBlob pdfBlob) {
         System.out.println("command : " + command);
         currentTaskNum.getAndIncrement();
         threadPoolExecutor.submit(() -> {
@@ -68,27 +65,12 @@ public class TaskThreadPool {
                 process = Runtime.getRuntime().exec(command);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
-                Thread.sleep(SLEEP_TIME);
-                StringBuilder currentLine = new StringBuilder();
-                while (reader.ready()) {
+                boolean done;
+                // 监测shell执行
+                done = complete(reader);
 
-                    while (reader.ready()) {
-                        currentLine.append(reader.readLine());
-                    }
-
-                    if (errorReader.ready()) {
-                        break;
-                    }
-
-                    System.out.println("解析 json 心跳包: " + currentLine);
-
-                    if (currentLine.toString().contains("done")) {
-                        break;
-                    }
-                    Thread.sleep(SLEEP_TIME);
-                }
-
-                if (!currentLine.toString().contains("done")) {
+                if (!done) {
+                    log.info("over time or throw exception");
                     if (errorReader.ready()) {
                         // 执行抛出异常
                         String errorMsg = errorReader.readLine();
@@ -115,28 +97,30 @@ public class TaskThreadPool {
                     pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.JsonTaskDone.getCode());
                     taskService.updateTaskStatus(task, oldStatus);
 
-                    System.out.println("thread name : " + Thread.currentThread().getName() + "执行成功");
+                    log.info("thread name : " + Thread.currentThread().getName() + "执行成功");
                 }
 
             } catch (InterruptedException e1) {
+                System.out.println(e1);
                 log.error("TaskThreadPool#submitJsonTask #{}", e1);
 
             } catch (IOException e2) {
+                System.out.println(e2);
                 log.error("TaskThreadPool#submitJsonTask #{}", e2);
             } finally {
                 currentTaskNum.getAndDecrement();
+                log.info("finally");
 
                 // 终止进程
                 if (process != null && process.isAlive()) {
                     process.destroyForcibly();
                 }
-
             }
         });
 
     }
 
-    public void submitContentTask(TaskService taskService, Task task, String command, PdfBlob pdfBlob, PdfBlobService pdfBlobService) {
+    public void submitContentTask(Task task, String command, PdfBlob pdfBlob) {
         currentTaskNum.getAndIncrement();
         threadPoolExecutor.submit(() -> {
             Process process = null;
@@ -147,35 +131,30 @@ public class TaskThreadPool {
                         process = Runtime.getRuntime().exec(command);
                         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                         BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), Charset.forName("utf-8")));
-                        Thread.sleep(SLEEP_TIME);
-                        StringBuilder currentLine = new StringBuilder();
-                        while (reader.ready()) {
-                            while (reader.ready()) {
-                                currentLine.append(reader.readLine());
-                            }
+                        boolean done;
+                        // 监测脚本执行
+                        done = complete(reader);
 
-                            if (errorReader.ready()) {
-                                break;
-                            }
-
-                            System.out.println("提取 content 心跳包: " + currentLine);
-                            if (currentLine.toString().contains("done")) {
-                                break;
-                            }
-                            Thread.sleep(SLEEP_TIME);
-                        }
-
-                        // 异常超时
-                        if (!currentLine.toString().contains("done") && !errorReader.ready()) {
+                        if (done) {
+                            log.info("done");
+                            // 执行成功
+                            int oldStatus = task.getStatus();
+                            task.setStatus(PdfTaskStatus.ContentTaskDone.getCode());
+                            pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.ContentTaskDone.getCode());
+                            taskService.updateTaskStatus(task, oldStatus);
+                            log.info("thread name : " + Thread.currentThread().getName() + "执行成功");
+                        } else if (!errorReader.ready()) {
                             int oldStatus = task.getStatus();
                             task.setStatus(PdfTaskStatus.ContentTaskTodo.getCode());
                             task.setRetryTimes(task.getRetryTimes() == null ? 1 : task.getRetryTimes() + 1);
                             taskService.updateTaskStatus(task, oldStatus);
                             pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.ContentTaskTodo.getCode());
-                        }
-
-                        // 异常
-                        if (errorReader.ready()) {
+                        } else {
+                            String errorMsg = errorReader.readLine();
+                            int oldStatus = task.getStatus();
+                            task.setStatus(PdfTaskStatus.TaskExecuteError.getCode());
+                            task.setErrorInfo(errorMsg);
+                            taskService.updateTaskStatus(task, oldStatus);
                             pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.TaskExecuteError.getCode());
                         }
 
@@ -188,13 +167,67 @@ public class TaskThreadPool {
                 }
             } finally {
                 currentTaskNum.getAndDecrement();
-
+                log.info("finally");
                 if (process != null && process.isAlive()) {
                     process.destroyForcibly();
                 }
-
             }
         });
+    }
+
+    public boolean complete(BufferedReader reader) throws InterruptedException, IOException {
+        String pre = "";
+        boolean done = false;
+        while (true) {
+            int num = SLEEP_TIME;
+            boolean flag = false;
+            while (num > 0) {
+                Thread.sleep(2000);
+                if (reader.ready()) {
+                    System.out.println("flag true");
+                    flag = true;
+                    break;
+                }
+                num--;
+            }
+            // 超时
+            if (!flag) {
+                break;
+            }
+//            String line;
+//            while ((line = reader.readLine()) != null) {
+//                if (line.toLowerCase().contains("done")) {
+//                    done = true;
+//                    break;
+//                }
+//            }
+//
+//            if (done) {
+//                System.out.println("complete");
+//                break;
+//            }
+
+            char[] chars = new char[512];
+            int len;
+            while ((len = reader.read(chars)) > 0) {
+                String s = pre + String.valueOf(chars, 0, len);
+                if (s.toLowerCase().contains("done")) {
+                    done = true;
+                    break;
+                }
+
+                if (s.length() > 4) {
+                    pre = s.substring(s.length() - 4);
+                } else {
+                    pre = s;
+                }
+            }
+
+            System.out.println("sleep");
+
+        }
+
+        return done;
     }
 
 }

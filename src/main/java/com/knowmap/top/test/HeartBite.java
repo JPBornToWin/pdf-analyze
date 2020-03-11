@@ -6,16 +6,14 @@ import java.io.InputStreamReader;
 
 public class HeartBite {
     public static void main(String[] args) throws Exception {
-        Process process = Runtime.getRuntime().exec("python3 /Users/xiahui/PycharmProjects/testknowmap/shell.py");
+        Process process = Runtime.getRuntime().exec("python3 /Users/xiahui/PycharmProjects/resetPDF/test/printTest.py");
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
         while (true) {
-            Thread.sleep(2000);
+            Thread.sleep(4000);
             String s;
-            if (!reader.ready()) {
-                System.out.println("shell error");
-                break;
-            }
-            System.out.println(s = reader.readLine());
+            System.out.println(s = errorReader.readLine());
             if (s.equals("done")) {
                 System.out.println("shell done");
                 break;

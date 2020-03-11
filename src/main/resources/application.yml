@@ -8,23 +8,46 @@ spring:
         quartz:
           threadPool:
             class: org.quartz.simpl.SimpleThreadPool
-            threadCount: 10
+            threadCount: 2
             threadPriority: 5
             threadsInheritContextClassLoaderOfInitializingThread: true
   datasource:
-    url: jdbc:mysql://148.70.210.242:3306/knowmap?useUnicode=true&characterEncoding=utf-8
+    url: jdbc:mysql://127.0.0.1:3306/knowmap2?useUnicode=true&characterEncoding=utf-8
     username: root
-    password: know.map.789
-#    url: jdbc:mysql://127.0.0.1:3306/knowmap2?useUnicode=true&characterEncoding=utf-8
+    password: 123
+#    url: jdbc:mysql://148.70.210.242:3306/knowmap?useUnicode=true&characterEncoding=utf-8
+#    url: jdbc:mysql://127.0.0.1:3306/knowmap?useUnicode=true&characterEncoding=utf-8
 #    username: root
-#    password: 123
+#    password: know.map.789
+    continue-on-error: true
+    sql-script-encoding: UTF-8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 12
+      max-wait: 30000
+      # 间隔多久进行一次检测，检测需要关闭的空闲连接
+      time-between-eviction-runs-millis: 60000
+      # 一个连接在池中最小生存的时间
+      min-evictable-idle-time-millis: 3000000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 15
+      connect-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      use-global-data-source-stat: true
+
 
 #pdfDealScript:
 #  dealJson: java -Djava.library.path=/Users/xiahui/Desktop/pdf/Lib -jar /Users/xiahui/Desktop/pdf/PDF-1.0-SNAPSHOT-jar-with-dependencies.jar
 #  dealContent: python3 /Users/xiahui/PycharmProjects/resetPDF/dispatcher.py
 
 # 20s
-cronSchedule: 0/20   * * * * ?
+cronSchedule: 0/12   * * * * ?
 
 # task 最多执行3次
 taskMaxRetryTimes: 3

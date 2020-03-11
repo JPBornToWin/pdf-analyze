@@ -27,6 +27,7 @@ import java.util.Objects;
 
 @Slf4j
 @Component
+@Transactional
 public class TaskHandle extends QuartzJobBean {
 
     @Autowired
@@ -48,13 +49,16 @@ public class TaskHandle extends QuartzJobBean {
     @Value("${taskMaxRetryTimes}")
     private Integer taskMaxRetryTimes;
 
+    @Autowired
+    private TaskThreadPool taskThreadPool;
+
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         log.info("task");
         try {
             // 判断线程池的状态 如果堆积任务过多直接返回
-            if (TaskThreadPool.getInstance().isFull()) {
+            if (taskThreadPool.isFull()) {
                 return;
             }
 
@@ -62,7 +66,7 @@ public class TaskHandle extends QuartzJobBean {
 
             tasks.stream().forEach(t -> {
                 // 判断线程池的状态
-                if (!TaskThreadPool.getInstance().isFull() || t.getRetryTimes() > taskMaxRetryTimes) {
+                if (!taskThreadPool.isFull() && t.getRetryTimes() < taskMaxRetryTimes) {
 
                     StringBuilder sb = new StringBuilder();
 
@@ -92,7 +96,7 @@ public class TaskHandle extends QuartzJobBean {
                                         append(jsonDir);
 
                                 // 此处调用线程池
-                                TaskThreadPool.getInstance().submitJsonTask(sb.toString(), taskService, t, pdfBlob, pdfBlobService);
+                                taskThreadPool.submitJsonTask(sb.toString(), t, pdfBlob);
                             } else {
                                 log.debug("task更新失败");
                                 throw new RuntimeException("执行回滚");
@@ -105,12 +109,12 @@ public class TaskHandle extends QuartzJobBean {
                             }
                         }
 
-                    } else if (t.getStatus().intValue() == PdfTaskStatus.ContentTaskTodo.getCode()) {
+                    } else if (t.getStatus().intValue() == PdfTaskStatus.JsonTaskDone.getCode()) {
 
                         PdfBlob pdfBlob = pdfBlobService.getLock(t.getId());
 
                         // 已经被处理
-                        if (Objects.nonNull(pdfBlob) && (pdfBlob.getStatus().intValue() == PdfTaskStatus.ContentTaskTodo.getCode().intValue() || pdfBlob.getStatus().intValue() == PdfTaskStatus.TaskExecuteError.getCode().intValue())) {
+                        if (Objects.nonNull(pdfBlob) && (pdfBlob.getStatus().intValue() == PdfTaskStatus.JsonTaskDone.getCode().intValue() || pdfBlob.getStatus().intValue() == PdfTaskStatus.TaskExecuteError.getCode().intValue())) {
                             // 更新 task'status
                             pdfBlobService.updatePdfBlobStatus(pdfBlob.getId(), pdfBlob.getStatus(), PdfTaskStatus.ContentTaskDoing.getCode());
                             t.setStatus(PdfTaskStatus.ContentTaskDoing.getCode());
@@ -124,7 +128,7 @@ public class TaskHandle extends QuartzJobBean {
                                         append(" ").append(pdfBlob.getId());
 
                                 // 此处调用线程池
-                                TaskThreadPool.getInstance().submitContentTask(taskService, t, sb.toString(), pdfBlob, pdfBlobService);
+                                taskThreadPool.submitContentTask(t, sb.toString(), pdfBlob);
                             } else {
                                 log.debug("task更新失败");
                                 throw new RuntimeException("执行回滚");

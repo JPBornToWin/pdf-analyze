@@ -5,7 +5,6 @@ public enum PdFBlobStatus {
     JsonTaskDoing(1),
     JsonTaskDone(2),
     TaskExecuteError(4),
-    ContentTaskTodo(2),
     ContentTaskDoing(5),
     ContentTaskDone(6);
 

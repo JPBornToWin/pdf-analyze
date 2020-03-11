@@ -31,7 +31,7 @@ public class TaskService {
 
 
     public int updateTaskStatus(Task task, int oldStatus) {
-       return taskMapper.updateStatus(task.getId(), task.getStatus(), oldStatus);
+       return taskMapper.updateStatus(task.getRetryTimes(), task.getId(), task.getStatus(), oldStatus);
     }
 
     public int updateTask(Task task) {

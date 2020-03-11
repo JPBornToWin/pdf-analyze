@@ -28,7 +28,7 @@ public class PdfBlobService {
 
     public List<PdfBlob> getTodoPdfBlob() {
         QueryWrapper<PdfBlob> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("status", PdFBlobStatus.JsonTaskTodo, PdFBlobStatus.ContentTaskTodo.getCode()).orderByAsc("id").last("limit 0, 1");
+        queryWrapper.in("status", PdFBlobStatus.JsonTaskTodo, PdFBlobStatus.JsonTaskDone.getCode()).orderByAsc("id").last("limit 0, 1");
         return pdfBlobMapper.selectList(queryWrapper);
     }
 
