@@ -8,7 +8,7 @@ spring:
         quartz:
           threadPool:
             class: org.quartz.simpl.SimpleThreadPool
-            threadCount: 2
+            threadCount: 4
             threadPriority: 5
             threadsInheritContextClassLoaderOfInitializingThread: true
   datasource:
